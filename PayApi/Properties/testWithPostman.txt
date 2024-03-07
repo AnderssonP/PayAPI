@@ -1,0 +1,8 @@
+﻿Test with postman
+
+#POST
+{
+    "email": "your email",
+    "subject": "Confirmation Email",
+    "message": "This is a test confirmation email."
+}
