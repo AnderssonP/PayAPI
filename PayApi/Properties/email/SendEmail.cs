@@ -1,8 +1,4 @@
-﻿using System.Net;
-using System.Net.Mail;
-
-
-namespace PayApi.Properties.email
+﻿namespace PayApi.Properties.email
 {
     public class SendEmail
     {
@@ -39,7 +35,5 @@ namespace PayApi.Properties.email
                 }
             }
         }
-
-
     }
 }

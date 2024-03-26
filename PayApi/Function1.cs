@@ -1,9 +1,3 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using PayApi.Properties.email;
-using System.Text.Json;
-
 namespace PayApi
 {
     public class Function1
@@ -13,37 +7,50 @@ namespace PayApi
         public Function1(ILoggerFactory loggerFactory)
         {
             _logger = loggerFactory.CreateLogger<Function1>();
+            
         }
 
         [Function("SendEmailConfirmation")]
-        public async Task<HttpResponseData> SendEmailConfirmation([HttpTrigger(AuthorizationLevel.Function, "post", Route = "kassa/payment/Done")] HttpRequestData req)
+        public async Task<HttpResponseData> SendEmailConfirmation(
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequestData req,
+        FunctionContext executionContext)
         {
-            _logger.LogInformation("HTTP trigger processed a SendEmail function for payment");
+            var logger = executionContext.GetLogger("SendEmailConfirmation");
+            logger.LogInformation("Starting to process SendEmail function for payment");
+
+            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            var emailData = JsonSerializer.Deserialize<EmailData>(requestBody);
+
             try
             {
-                string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-                var data = JsonSerializer.Deserialize<JsonElement>(requestBody);
+                var email = emailData?.Email ?? "missing";
+                var subject = emailData?.Subject ?? "missing";
+                var message = emailData?.Message ?? "missing";
 
-                var email = data.TryGetProperty("email", out JsonElement emailElement) ? emailElement.GetString() : "missing";
-                var subject = data.TryGetProperty("subject", out JsonElement subjectElement) ? subjectElement.GetString() : "missing";
-                var message = data.TryGetProperty("message", out JsonElement messageElement) ? messageElement.GetString() : "missing";
+                logger.LogInformation($"Received email: {email}");
+                logger.LogInformation($"Subject: {subject}");
+                logger.LogInformation($"Message: {message}");
 
-                _logger.LogInformation($"Received email: {email}");
-                _logger.LogInformation($"Subject: {subject}");
-                _logger.LogInformation($"Message: {message}");
+                SendEmail.sendEmailToCustomer(email, subject, message);
 
-                var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
-                await response.WriteStringAsync("Email data received and logged.");
-                SendEmail.sendEmailToCustomer(email,subject,message);
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteStringAsync($"Email sent to {email}");
                 return response;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"An error occurred: {ex.Message}");
-                var response = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
+                logger.LogError($"An error occurred: {ex.Message}");
+                var response = req.CreateResponse(HttpStatusCode.InternalServerError);
                 await response.WriteStringAsync("An error occurred processing your request.");
                 return response;
             }
+        }
+
+        public class EmailData
+        {
+            public string Email { get; set; }
+            public string Subject { get; set; }
+            public string Message { get; set; }
         }
     }
 }
