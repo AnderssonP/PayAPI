@@ -1,31 +1,44 @@
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.DurableTask;
+using Microsoft.DurableTask;
+using Microsoft.DurableTask.Client;
+using Microsoft.Extensions.Logging;
+
 namespace PayApi.Properties
 {
-    public static class makePayment
+    public static class MakePayment
     {
-        [Function(nameof(makePayment))]
-        public static async Task RunOrchestrator(
-            [OrchestrationTrigger] TaskOrchestrationContext context)
+        [FunctionName("startPayment")]
+        public static async Task RunOrchestrator([Microsoft.Azure.Functions.Worker.OrchestrationTrigger] IDurableOrchestrationContext context)
         {
-            var emailData = context.GetInput<EmailData>();
+            var result = await context.CallActivityAsync<string>("getBankInfo", null);
 
-            await context.CallActivityAsync("SendEmailConfirmation", emailData);
+            if (result == "OK")  
+            {
+                var emailData = new EmailData
+                {
+                    Email = "pontus.andersson1998@gmail.com",
+                    Subject = "Betalningsbekräftelse",
+                    Message = "Din betalning på 10 SEK har mottagits."
+                };
+
+                await context.CallActivityAsync("SendEmailConfirmation", emailData);
+            }
         }
 
-        [Function("makePayment_HttpStart")]
-        public static async Task<HttpResponseData> HttpStart(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequestData req,
-            [DurableClient] DurableTaskClient client,
-            FunctionContext executionContext)
+        [FunctionName("StartOrchestration")]
+        public static async Task<HttpResponseData> Start(
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequestData req,
+        [Microsoft.Azure.Functions.Worker.DurableClient] IDurableOrchestrationClient starter)
         {
-            ILogger logger = executionContext.GetLogger("makePayment_HttpStart");
+            string instanceId = await starter.StartNewAsync("OrchestratorFunction", null);
 
-            string instanceId = await client.ScheduleNewOrchestrationInstanceAsync(
-                nameof(makePayment));
-
-            logger.LogInformation("Started orchestration with ID = '{instanceId}'.", instanceId);
-
-            return client.CreateCheckStatusResponse(req, instanceId);
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync($"Started orchestration with ID = '{instanceId}'.");
+            return response;
         }
+
     }
 }
-

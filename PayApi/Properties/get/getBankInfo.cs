@@ -1,6 +1,3 @@
-using Newtonsoft.Json;
-using PayPal.Api;
-
 namespace PayApi.Properties.get
 {
     public class getBankInfo
@@ -14,8 +11,8 @@ namespace PayApi.Properties.get
             _config = config;
         }
 
-        [Function("getBankInfo")]
-        public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "get", Route = "get")] HttpRequestData req)
+        [Function(nameof(PaypalPayment))]
+        public async Task<string> PaypalPayment([ActivityTrigger] string amount)
         {
             try
             {
@@ -25,35 +22,34 @@ namespace PayApi.Properties.get
                 {
                     intent = "sale",
                     payer = new Payer() { payment_method = "paypal" },
+
                     transactions = new List<Transaction>()
-            {
-                new Transaction()
-                {
-                    description = "Test betalning",
-                    amount = new Amount() { currency = "SEK", total = "10" },
-                }
-            },
+                    {
+                        new Transaction()
+                        {
+                            description = "Test betalning",
+                            amount = new Amount() { currency = "USD", total = amount } 
+                        }
+                    },
+
+                    redirect_urls = new RedirectUrls()
+                    {
+                        return_url = "https://example.com/return",
+                        cancel_url = "https://example.com/cancel"   
+                    }
                 };
 
                 var createdPayment = payment.Create(apiContext);
 
-                var response = req.CreateResponse(HttpStatusCode.OK);
-                response.Headers.Add("Content-Type", "application/json");
-
-                await response.WriteStringAsync(JsonConvert.SerializeObject(createdPayment));
-                return response;
+                return JsonSerializer.Serialize(createdPayment);
             }
             catch (Exception ex)
             {
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                errorResponse.Headers.Add("Content-Type", "application/json");
-
-                await errorResponse.WriteStringAsync(JsonConvert.SerializeObject(new { error = ex.Message }));
-                return errorResponse;
+                return JsonSerializer.Serialize(new { error = ex.Message });
             }
         }
 
-        public static APIContext GetAPIContext(IConfiguration configen)
+        private static APIContext GetAPIContext(IConfiguration configen)
         {
 
             string clientId = configen["ClientID"];

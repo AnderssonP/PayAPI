@@ -25,6 +25,7 @@
                 smtpClient.Send(mail);
 
                 Console.WriteLine("Email sent successfully!");
+
             }
             catch (Exception ex)
             {

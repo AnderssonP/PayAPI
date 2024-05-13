@@ -13,4 +13,6 @@ global using System.Net.Mail;
 
 global using static PayApi.Function1;
 
+global using PayPal.Api;
+
 
