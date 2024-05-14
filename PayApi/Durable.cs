@@ -13,9 +13,13 @@ namespace PayApi
            
             ILogger logger = context.CreateReplaySafeLogger(nameof(durable));
             logger.LogInformation("makeing payment");
+
+            var paymentRequest = context.GetInput<PaymentRequest>();
+
             var outputs = new List<string>();
             var paymentId = "";
-            var paymentResult = await context.CallActivityAsync<string>(nameof(getBankInfo.PaypalPayment), "10.00");
+
+            var paymentResult = await context.CallActivityAsync<string>(nameof(getBankInfo.PaypalPayment), paymentRequest.Amount);
             var paymentData = JsonSerializer.Deserialize<PaymentData>(paymentResult);
 
             if (paymentData != null && string.IsNullOrEmpty(paymentData.State) && paymentData.State != "error")
@@ -23,7 +27,7 @@ namespace PayApi
                 var emailString = $"Payment from {paymentData.payer.payment_method} of {paymentData.transactions.FirstOrDefault()?.amount.total} {paymentData.transactions.FirstOrDefault()?.amount.currency}";
                 paymentId = paymentData.id;
                 outputs.Add(paymentId);
-                SendEmail.sendEmailToCustomer("pontus.andersson1998@gmail.com", "Payment Confirmation", emailString);
+                SendEmail.sendEmailToCustomer(paymentRequest.Email, "Payment Confirmation", emailString);
             }
 
             return outputs;
@@ -38,9 +42,11 @@ namespace PayApi
         {
             ILogger logger = executionContext.GetLogger("Durable_HttpStart");
 
-            // Function input comes from the request content.
+            var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+            var paymentRequest = JsonSerializer.Deserialize<PaymentRequest>(requestBody);
+
             string instanceId = await client.ScheduleNewOrchestrationInstanceAsync(
-                nameof(durable));
+                nameof(durable),paymentRequest);
 
             logger.LogInformation($"Started orchestration with ID = '{instanceId}'.", instanceId);
 
