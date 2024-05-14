@@ -2,7 +2,6 @@
 
 #POST
 {
-    "email": "your email",
-    "subject": "Confirmation Email",
-    "message": "This is a test confirmation email."
+    "Email": "Ange en e-mail",
+    "Amount": "100.00" // ska skickas som string
 }
