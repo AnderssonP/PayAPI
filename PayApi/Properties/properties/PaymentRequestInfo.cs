@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace PayApi.Properties.get
 {
-    public class PaymentRequest
+    public class PaymentRequestInfo
     {
         public string Email { get; set; }
         public string Amount { get; set; }

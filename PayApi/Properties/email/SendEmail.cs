@@ -1,4 +1,7 @@
-﻿namespace PayApi.Properties.email
+﻿using PayApi.Properties.get;
+using PayApi.Properties.properties;
+
+namespace PayApi.Properties.email
 {
     public class SendEmail
     {
@@ -34,6 +37,19 @@
                 {
                     Console.WriteLine("Inner exception: " + ex.InnerException.Message);
                 }
+            }
+        }
+
+        public static void SendEmailOnSuccessfulPayment(string paymentResult, List<string> outputs, PaymentRequestInfo paymentRequest)
+        {
+            var paymentData = JsonSerializer.Deserialize<PaymentDataInfo>(paymentResult);
+
+            if (paymentData != null && string.IsNullOrEmpty(paymentData.State) && paymentData.State != "error")
+            {
+                var emailString = $"Payment from {paymentData.payer.payment_method} of {paymentData.transactions.FirstOrDefault()?.amount.total} {paymentData.transactions.FirstOrDefault()?.amount.currency}";
+                var paymentId = paymentData.id;
+                outputs.Add(paymentId);
+                sendEmailToCustomer(paymentRequest.Email, "Payment Confirmation", emailString);
             }
         }
     }

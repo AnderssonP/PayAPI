@@ -1,11 +1,11 @@
-namespace PayApi.Properties.get
+namespace PayApi.Properties.paypal
 {
-    public class getBankInfo
+    public class MakePayment
     {
-        private readonly ILogger<getBankInfo> _logger;
+        private readonly ILogger<MakePayment> _logger;
         private readonly IConfiguration _config;
 
-        public getBankInfo(ILogger<getBankInfo> logger, IConfiguration config)
+        public MakePayment(ILogger<MakePayment> logger, IConfiguration config)
         {
             _logger = logger;
             _config = config;
@@ -28,14 +28,14 @@ namespace PayApi.Properties.get
                         new Transaction()
                         {
                             description = "Test betalning",
-                            amount = new Amount() { currency = "USD", total = amount } 
+                            amount = new Amount() { currency = "USD", total = amount }
                         }
                     },
 
                     redirect_urls = new RedirectUrls()
                     {
                         return_url = "https://example.com/return",
-                        cancel_url = "https://example.com/cancel"   
+                        cancel_url = "https://example.com/cancel"
                     }
                 };
 

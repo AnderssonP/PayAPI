@@ -1,4 +1,7 @@
 using PayApi.Properties.get;
+using PayApi.Properties.Logg;
+using PayApi.Properties.paypal;
+using PayApi.Properties.properties;
 using PayPal.Api;
 
 namespace PayApi
@@ -10,25 +13,14 @@ namespace PayApi
         public static async Task<List<string>> RunOrchestrator(
             [OrchestrationTrigger] TaskOrchestrationContext context)
         {
-           
-            ILogger logger = context.CreateReplaySafeLogger(nameof(durable));
-            logger.LogInformation("makeing payment");
+            LoggerMethods.LoggPayment(context);
 
-            var paymentRequest = context.GetInput<PaymentRequest>();
+            var paymentRequest = context.GetInput<PaymentRequestInfo>();
 
             var outputs = new List<string>();
-            var paymentId = "";
 
-            var paymentResult = await context.CallActivityAsync<string>(nameof(getBankInfo.PaypalPayment), paymentRequest.Amount);
-            var paymentData = JsonSerializer.Deserialize<PaymentData>(paymentResult);
-
-            if (paymentData != null && string.IsNullOrEmpty(paymentData.State) && paymentData.State != "error")
-            {
-                var emailString = $"Payment from {paymentData.payer.payment_method} of {paymentData.transactions.FirstOrDefault()?.amount.total} {paymentData.transactions.FirstOrDefault()?.amount.currency}";
-                paymentId = paymentData.id;
-                outputs.Add(paymentId);
-                SendEmail.sendEmailToCustomer(paymentRequest.Email, "Payment Confirmation", emailString);
-            }
+            var paymentResult = await context.CallActivityAsync<string>(nameof(MakePayment.PaypalPayment), paymentRequest.Amount);
+            SendEmail.SendEmailOnSuccessfulPayment(paymentResult, outputs, paymentRequest);
 
             return outputs;
            
@@ -40,10 +32,10 @@ namespace PayApi
             [DurableClient] DurableTaskClient client,
             FunctionContext executionContext)
         {
-            ILogger logger = executionContext.GetLogger("Durable_HttpStart");
+            var logger = LoggerMethods.LoggHTTPStart(executionContext);
 
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var paymentRequest = JsonSerializer.Deserialize<PaymentRequest>(requestBody);
+            var paymentRequest = JsonSerializer.Deserialize<PaymentRequestInfo>(requestBody);
 
             string instanceId = await client.ScheduleNewOrchestrationInstanceAsync(
                 nameof(durable),paymentRequest);
@@ -52,5 +44,6 @@ namespace PayApi
 
             return client.CreateCheckStatusResponse(req, instanceId);
         }
+
     }
 }

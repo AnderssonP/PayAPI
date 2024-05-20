@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PayApi
+namespace PayApi.Properties.properties
 {
-    public class PaymentData
+    public class PaymentDataInfo
     {
         public string id { get; set; }
         public string State { get; set; }
